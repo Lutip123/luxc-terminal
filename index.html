@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Luxc // Arch Linux Hacker Terminal</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+    <link rel="stylesheet" href="css/style.css?v=2.0">
+</head>
+<body class="theme-matrix crt-enabled">
+    <!-- Matrix Rain Canvas Background -->
+    <canvas id="matrix-canvas"></canvas>
+
+    <!-- CRT Overlay Layer -->
+    <div class="crt-overlay"></div>
+    <div class="crt-scanline"></div>
+
+    <!-- Main Container -->
+    <div class="terminal-wrapper">
+        <!-- Top Navigation / Status Bar -->
+        <header class="terminal-header">
+            <div class="window-controls">
+                <span class="control-btn close" title="Tutup"></span>
+                <span class="control-btn minimize" title="Minimize"></span>
+                <span class="control-btn maximize" id="btn-fullscreen" title="Fullscreen"></span>
+            </div>
+            <div class="window-title">
+                <span class="distro-icon">▲</span>
+                <span id="header-title">luxc@archlinux: ~ (bash 5.2.26)</span>
+            </div>
+            <div class="status-widgets">
+                <div class="widget ip-widget" title="Local IP Access">
+                    <span class="widget-icon">🌐</span>
+                    <span id="ip-display">IP: Loading...</span>
+                </div>
+                <div class="widget sys-widget" title="CPU / RAM">
+                    <span class="widget-icon">⚡</span>
+                    <span id="mem-display">RAM: --/--</span>
+                </div>
+                <button class="widget-btn" id="btn-sound" title="Toggle Sound (Audio SFX)">
+                    <span id="sound-icon">🔊</span>
+                </button>
+                <button class="widget-btn" id="btn-crt" title="Toggle CRT Effects">
+                    <span>📺</span>
+                </button>
+                <div class="theme-dropdown">
+                    <select id="theme-select" title="Ganti Tema Warna">
+                        <option value="matrix" selected>🟢 Matrix Green</option>
+                        <option value="cyan">🔵 Cyber Cyan</option>
+                        <option value="amber">🟠 Retro Amber</option>
+                        <option value="blood">🔴 Blood Red</option>
+                        <option value="purple">🟣 Synth Purple</option>
+                        <option value="white">⚪ Ghost White</option>
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <!-- Terminal Body / Output Log -->
+        <main class="terminal-body" id="terminal-body">
+            <div id="output-container"></div>
+            
+            <!-- Active Prompt Row -->
+            <div class="prompt-row" id="active-prompt-row">
+                <span class="prompt-prefix">
+                    <span class="prompt-user">luxc</span><span class="prompt-at">@</span><span class="prompt-host">archlinux</span>:<span class="prompt-path">~</span><span class="prompt-symbol">$</span>
+                </span>
+                <span class="prompt-input-area" id="prompt-input-area">
+                    <span id="prompt-text-before"></span><span class="cursor-block" id="prompt-cursor"> </span><span id="prompt-text-after"></span>
+                </span>
+                <input type="text" id="terminal-input" autocomplete="off" spellcheck="false" autofocus aria-label="Terminal Input" />
+            </div>
+        </main>
+
+        <!-- Mobile / Quick Action Toolbar -->
+        <div class="mobile-toolbar">
+            <button class="tool-btn" data-key="Tab">TAB (Autocomplete)</button>
+            <button class="tool-btn" data-key="ArrowUp">▲ UP</button>
+            <button class="tool-btn" data-key="ArrowDown">▼ DOWN</button>
+            <button class="tool-btn" data-cmd="clear">CLEAR</button>
+            <button class="tool-btn" data-cmd="neofetch">NEOFETCH</button>
+            <button class="tool-btn" data-cmd="cmatrix">MATRIX</button>
+            <button class="tool-btn" data-cmd="help">HELP</button>
+            <button class="tool-btn cancel-btn" id="btn-ctrl-c">Ctrl+C</button>
+        </div>
+    </div>
+
+    <!-- In-Terminal Nano/Vim Text Editor Modal -->
+    <div class="editor-overlay hidden" id="editor-overlay">
+        <div class="editor-header">
+            <span>UW PICO(tm) 2026 - GNU nano 8.0</span>
+            <span id="editor-filename">File: baru.txt</span>
+            <span id="editor-modified"></span>
+        </div>
+        <textarea id="editor-textarea" spellcheck="false"></textarea>
+        <div class="editor-footer">
+            <div class="editor-help-row">
+                <span class="key-hint"><kbd>^G</kbd> Get Help</span>
+                <span class="key-hint"><kbd>^O</kbd> WriteOut (Save)</span>
+                <span class="key-hint"><kbd>^R</kbd> Read File</span>
+                <span class="key-hint"><kbd>^Y</kbd> Prev Page</span>
+            </div>
+            <div class="editor-help-row">
+                <span class="key-hint"><kbd>^X</kbd> Exit (Ctrl+X)</span>
+                <span class="key-hint"><kbd>^J</kbd> Justify</span>
+                <span class="key-hint"><kbd>^W</kbd> Where Is</span>
+                <span class="key-hint"><kbd>^V</kbd> Next Page</span>
+            </div>
+            <div class="editor-actions-mobile">
+                <button class="editor-btn save" id="editor-btn-save">💾 Simpan (Save)</button>
+                <button class="editor-btn exit" id="editor-btn-exit">❌ Keluar (Exit)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- In-Terminal HTOP Task Monitor Overlay -->
+    <div class="htop-overlay hidden" id="htop-overlay">
+        <div class="htop-header">
+            <div class="htop-meters">
+                <div class="meter-line"><span class="m-label">1  [</span><span class="m-bar" id="htop-cpu1">|||||||||||||||| 24.5%</span><span class="m-label">]</span></div>
+                <div class="meter-line"><span class="m-label">2  [</span><span class="m-bar" id="htop-cpu2">|||||||| 12.1%</span><span class="m-label">]</span></div>
+                <div class="meter-line"><span class="m-label">Mem[</span><span class="m-bar mem" id="htop-mem">|||||||||||||||||||| 1.42G/7.85G</span><span class="m-label">]</span></div>
+                <div class="meter-line"><span class="m-label">Swp[</span><span class="m-bar swp">| 45.0M/2.00G</span><span class="m-label">]</span></div>
+            </div>
+            <div class="htop-summary">
+                <div>Tasks: <b id="htop-tasks">68</b>, <b id="htop-thr">114 thr</b>; <b>1 running</b></div>
+                <div>Load average: <b>0.24 0.18 0.15</b></div>
+                <div>Uptime: <b id="htop-uptime">02:45:12</b></div>
+            </div>
+        </div>
+        <div class="htop-table-wrapper">
+            <table class="htop-table">
+                <thead>
+                    <tr>
+                        <th>PID</th>
+                        <th>USER</th>
+                        <th>PRI</th>
+                        <th>NI</th>
+                        <th>VIRT</th>
+                        <th>RES</th>
+                        <th>SHR</th>
+                        <th>S</th>
+                        <th>CPU%</th>
+                        <th>MEM%</th>
+                        <th>TIME+</th>
+                        <th>Command</th>
+                    </tr>
+                </thead>
+                <tbody id="htop-process-list">
+                    <!-- Dynamic process rows -->
+                </tbody>
+            </table>
+        </div>
+        <div class="htop-footer">
+            <span><kbd>F1</kbd>Help</span>
+            <span><kbd>F2</kbd>Setup</span>
+            <span><kbd>F3</kbd>Search</span>
+            <span><kbd>F4</kbd>Filter</span>
+            <span><kbd>F5</kbd>Tree</span>
+            <span><kbd>F6</kbd>SortBy</span>
+            <span><kbd>F9</kbd>Kill</span>
+            <span class="htop-quit"><kbd>F10</kbd> / <kbd>q</kbd> Quit</span>
+            <button id="htop-close-btn" class="editor-btn exit">❌ Close HTOP (q)</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/audio.js?v=2.0"></script>
+    <script src="js/matrix.js?v=2.0"></script>
+    <script src="js/filesystem.js?v=2.0"></script>
+    <script src="js/commands.js?v=2.0"></script>
+    <script src="js/terminal.js?v=2.0"></script>
+</body>
+</html>
