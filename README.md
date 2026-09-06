@@ -1,0 +1,2 @@
+# luxc-terminal
+terminal
